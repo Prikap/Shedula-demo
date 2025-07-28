@@ -4,7 +4,7 @@ This project is a minimal frontend application built with **Next.js** and **Tail
 
 ## 🌐 Live Demo
 
-[View the App](https://eclectic-lolly-3eff89.netlify.app/)
+[View the App](shedula-med.netlify.app)
 
 ## 📦 Tech Stack
 
