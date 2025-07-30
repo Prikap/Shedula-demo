@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Calendar, Clock, User } from 'lucide-react';
-import { Doctor } from '../App';
+import { apiService, Doctor } from '../services/api';
 
 interface TimeSlotPickerProps {
   doctor: Doctor;
@@ -8,9 +8,35 @@ interface TimeSlotPickerProps {
   onBack: () => void;
 }
 
+interface TimeSlot {
+  date: string;
+  time: string;
+  available: boolean;
+}
+
 const TimeSlotPicker: React.FC<TimeSlotPickerProps> = ({ doctor, onSelectSlot, onBack }) => {
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedTime, setSelectedTime] = useState('');
+  const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    fetchAvailableSlots();
+  }, [doctor.id]);
+
+  const fetchAvailableSlots = async () => {
+    try {
+      setLoading(true);
+      const slots = await apiService.getDoctorSlots(doctor.id);
+      setAvailableSlots(slots);
+    } catch (err) {
+      setError('Failed to load available slots. Please try again.');
+      console.error('Error fetching slots:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Generate next 7 days
   const getAvailableDates = () => {
@@ -34,7 +60,22 @@ const TimeSlotPicker: React.FC<TimeSlotPickerProps> = ({ doctor, onSelectSlot, o
   };
 
   const availableDates = getAvailableDates();
-  const timeSlots = ['9:00 AM', '10:00 AM', '11:00 AM', '2:00 PM', '3:00 PM', '4:00 PM', '5:00 PM'];
+
+  // Get unique dates from available slots
+  const slotDates = [...new Set(availableSlots.map(slot => slot.date))].sort();
+
+  // Get time slots for selected date
+  const getTimeSlotsForDate = (date: string) => {
+    return availableSlots
+      .filter(slot => slot.date === date && slot.available)
+      .map(slot => slot.time)
+      .sort();
+  };
+
+  const handleDateSelect = (date: string) => {
+    setSelectedDate(date);
+    setSelectedTime(''); // Reset time selection when date changes
+  };
 
   const handleConfirm = () => {
     if (selectedDate && selectedTime) {
@@ -83,69 +124,99 @@ const TimeSlotPicker: React.FC<TimeSlotPickerProps> = ({ doctor, onSelectSlot, o
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Date Selection */}
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
-            <div className="flex items-center mb-6">
-              <Calendar className="w-6 h-6 text-blue-600 mr-3" />
-              <h3 className="text-xl font-semibold text-gray-900">Select Date</h3>
+        {/* Error Message */}
+        {error && (
+          <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
+            {error}
+          </div>
+        )}
+
+        {/* Loading State */}
+        {loading && (
+          <div className="text-center py-12">
+            <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading available slots...</p>
+          </div>
+        )}
+
+        {!loading && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Date Selection */}
+            <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
+              <div className="flex items-center mb-6">
+                <Calendar className="w-6 h-6 text-blue-600 mr-3" />
+                <h3 className="text-xl font-semibold text-gray-900">Select Date</h3>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3">
+                {availableDates.map((date) => {
+                  const hasSlots = slotDates.includes(date.value);
+                  return (
+                    <button
+                      key={date.value}
+                      onClick={() => hasSlots && handleDateSelect(date.value)}
+                      disabled={!hasSlots}
+                      className={`p-4 rounded-xl text-left transition-all border-2 ${
+                        selectedDate === date.value
+                          ? 'border-blue-600 bg-blue-50 text-blue-900'
+                          : hasSlots
+                          ? 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                          : 'border-gray-100 bg-gray-50 text-gray-400 cursor-not-allowed'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium">{date.label}</span>
+                        <div className="flex items-center space-x-2">
+                          {date.isToday && hasSlots && (
+                            <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
+                              Available
+                            </span>
+                          )}
+                          {!hasSlots && (
+                            <span className="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded-full">
+                              No slots
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-3">
-              {availableDates.map((date) => (
-                <button
-                  key={date.value}
-                  onClick={() => setSelectedDate(date.value)}
-                  className={`p-4 rounded-xl text-left transition-all border-2 ${
-                    selectedDate === date.value
-                      ? 'border-blue-600 bg-blue-50 text-blue-900'
-                      : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium">{date.label}</span>
-                    {date.isToday && (
-                      <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
-                        Tomorrow
-                      </span>
-                    )}
-                  </div>
-                </button>
-              ))}
+            {/* Time Selection */}
+            <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
+              <div className="flex items-center mb-6">
+                <Clock className="w-6 h-6 text-blue-600 mr-3" />
+                <h3 className="text-xl font-semibold text-gray-900">Select Time</h3>
+              </div>
+
+              {!selectedDate ? (
+                <div className="text-center py-12">
+                  <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-600">Please select a date first</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-3">
+                  {getTimeSlotsForDate(selectedDate).map((time) => (
+                    <button
+                      key={time}
+                      onClick={() => setSelectedTime(time)}
+                      className={`p-3 rounded-xl text-center transition-all border-2 ${
+                        selectedTime === time
+                          ? 'border-blue-600 bg-blue-50 text-blue-900'
+                          : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      <span className="font-medium">{time}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
-
-          {/* Time Selection */}
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
-            <div className="flex items-center mb-6">
-              <Clock className="w-6 h-6 text-blue-600 mr-3" />
-              <h3 className="text-xl font-semibold text-gray-900">Select Time</h3>
-            </div>
-
-            {!selectedDate ? (
-              <div className="text-center py-12">
-                <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-600">Please select a date first</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 gap-3">
-                {timeSlots.map((time) => (
-                  <button
-                    key={time}
-                    onClick={() => setSelectedTime(time)}
-                    className={`p-3 rounded-xl text-center transition-all border-2 ${
-                      selectedTime === time
-                        ? 'border-blue-600 bg-blue-50 text-blue-900'
-                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                    }`}
-                  >
-                    <span className="font-medium">{time}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+        )}
 
         {/* Confirmation */}
         {selectedDate && selectedTime && (

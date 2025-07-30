@@ -1,16 +1,35 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowLeft, User, Mail, Phone, MapPin, Calendar, Clock, Star, Edit3, Download, Filter } from 'lucide-react';
-import { User as UserType, Appointment } from '../App';
+import { apiService, User as UserType, Appointment } from '../services/api';
 
 interface ProfileProps {
   user: UserType;
-  appointments: Appointment[];
   onBack: () => void;
 }
 
-const Profile: React.FC<ProfileProps> = ({ user, appointments, onBack }) => {
+const Profile: React.FC<ProfileProps> = ({ user, onBack }) => {
   const [activeTab, setActiveTab] = useState<'profile' | 'appointments' | 'history'>('profile');
   const [filterStatus, setFilterStatus] = useState<'all' | 'upcoming' | 'completed' | 'cancelled'>('all');
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    fetchAppointments();
+  }, []);
+
+  const fetchAppointments = async () => {
+    try {
+      setLoading(true);
+      const userAppointments = await apiService.getUserAppointments(user.id);
+      setAppointments(userAppointments);
+    } catch (err) {
+      setError('Failed to load appointments. Please try again.');
+      console.error('Error fetching appointments:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const upcomingAppointments = appointments.filter(apt => apt.status === 'upcoming');
   const completedAppointments = appointments.filter(apt => apt.status === 'completed');
@@ -57,6 +76,13 @@ const Profile: React.FC<ProfileProps> = ({ user, appointments, onBack }) => {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Error Message */}
+        {error && (
+          <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
+            {error}
+          </div>
+        )}
+
         {/* Profile Header */}
         <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 mb-8">
           <div className="flex items-center justify-between">
@@ -127,7 +153,7 @@ const Profile: React.FC<ProfileProps> = ({ user, appointments, onBack }) => {
                       </div>
                       <div>
                         <p className="text-sm text-gray-600">Phone</p>
-                        <p className="font-semibold text-gray-900">+91 ******7114</p>
+                        <p className="font-semibold text-gray-900">{user.phone}</p>
                       </div>
                     </div>
                   </div>
@@ -160,15 +186,21 @@ const Profile: React.FC<ProfileProps> = ({ user, appointments, onBack }) => {
                   <h3 className="font-semibold text-gray-900 mb-3">Health Summary</h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="text-center">
-                      <p className="text-2xl font-bold text-blue-600">{appointments.length}</p>
+                      <p className="text-2xl font-bold text-blue-600">
+                        {loading ? '...' : appointments.length}
+                      </p>
                       <p className="text-sm text-gray-600">Total Appointments</p>
                     </div>
                     <div className="text-center">
-                      <p className="text-2xl font-bold text-green-600">{completedAppointments.length}</p>
+                      <p className="text-2xl font-bold text-green-600">
+                        {loading ? '...' : completedAppointments.length}
+                      </p>
                       <p className="text-sm text-gray-600">Completed</p>
                     </div>
                     <div className="text-center">
-                      <p className="text-2xl font-bold text-orange-600">{upcomingAppointments.length}</p>
+                      <p className="text-2xl font-bold text-orange-600">
+                        {loading ? '...' : upcomingAppointments.length}
+                      </p>
                       <p className="text-sm text-gray-600">Upcoming</p>
                     </div>
                   </div>
@@ -200,39 +232,49 @@ const Profile: React.FC<ProfileProps> = ({ user, appointments, onBack }) => {
                   </button>
                 </div>
 
+                {/* Loading State */}
+                {loading && (
+                  <div className="text-center py-12">
+                    <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <p className="text-gray-600">Loading appointments...</p>
+                  </div>
+                )}
+
                 {/* Appointments List */}
-                <div className="space-y-4">
-                  {getFilteredAppointments().map((appointment) => (
-                    <div
-                      key={appointment.id}
-                      className="border border-gray-200 rounded-xl p-4 hover:shadow-md transition-shadow"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-4">
-                          <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl flex items-center justify-center">
-                            <User className="w-6 h-6 text-white" />
+                {!loading && (
+                  <div className="space-y-4">
+                    {getFilteredAppointments().map((appointment) => (
+                      <div
+                        key={appointment.id}
+                        className="border border-gray-200 rounded-xl p-4 hover:shadow-md transition-shadow"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-4">
+                            <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl flex items-center justify-center">
+                              <User className="w-6 h-6 text-white" />
+                            </div>
+                            <div>
+                              <h3 className="font-semibold text-gray-900">{appointment.doctorName}</h3>
+                              <p className="text-sm text-gray-600">{appointment.specialty}</p>
+                              <p className="text-sm text-gray-500">{appointment.type}</p>
+                            </div>
                           </div>
-                          <div>
-                            <h3 className="font-semibold text-gray-900">{appointment.doctorName}</h3>
-                            <p className="text-sm text-gray-600">{appointment.specialty}</p>
-                            <p className="text-sm text-gray-500">{appointment.type}</p>
+                          <div className="text-right">
+                            <div className="flex items-center space-x-2 mb-2">
+                              <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(appointment.status)}`}>
+                                {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
+                              </span>
+                            </div>
+                            <p className="font-medium text-gray-900">{formatDate(appointment.date)}</p>
+                            <p className="text-sm text-gray-600">{appointment.time}</p>
                           </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="flex items-center space-x-2 mb-2">
-                            <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(appointment.status)}`}>
-                              {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
-                            </span>
-                          </div>
-                          <p className="font-medium text-gray-900">{formatDate(appointment.date)}</p>
-                          <p className="text-sm text-gray-600">{appointment.time}</p>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
 
-                {getFilteredAppointments().length === 0 && (
+                {!loading && getFilteredAppointments().length === 0 && (
                   <div className="text-center py-12">
                     <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                     <h3 className="text-lg font-medium text-gray-900 mb-2">No appointments found</h3>
@@ -249,21 +291,27 @@ const Profile: React.FC<ProfileProps> = ({ user, appointments, onBack }) => {
                   <div className="bg-gray-50 rounded-xl p-4">
                     <h3 className="font-semibold text-gray-900 mb-3">Recent Visits</h3>
                     <div className="space-y-3">
-                      {completedAppointments.slice(0, 3).map((appointment) => (
-                        <div key={appointment.id} className="flex items-center justify-between">
-                          <div>
-                            <p className="font-medium text-gray-900">{appointment.doctorName}</p>
-                            <p className="text-sm text-gray-600">{appointment.specialty}</p>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-sm font-medium text-gray-900">{formatDate(appointment.date)}</p>
-                            <div className="flex items-center">
-                              <Star className="w-3 h-3 text-yellow-400 fill-current" />
-                              <span className="text-xs text-gray-600 ml-1">4.8</span>
+                      {loading ? (
+                        <div className="text-center py-4">
+                          <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+                        </div>
+                      ) : (
+                        completedAppointments.slice(0, 3).map((appointment) => (
+                          <div key={appointment.id} className="flex items-center justify-between">
+                            <div>
+                              <p className="font-medium text-gray-900">{appointment.doctorName}</p>
+                              <p className="text-sm text-gray-600">{appointment.specialty}</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-sm font-medium text-gray-900">{formatDate(appointment.date)}</p>
+                              <div className="flex items-center">
+                                <Star className="w-3 h-3 text-yellow-400 fill-current" />
+                                <span className="text-xs text-gray-600 ml-1">4.8</span>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
+                        ))
+                      )}
                     </div>
                   </div>
 

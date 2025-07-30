@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Star, Clock, Search, Filter } from 'lucide-react';
-import { Doctor } from '../App';
+import { apiService, Doctor } from '../services/api';
 
 interface DoctorSelectionProps {
   onSelectDoctor: (doctor: Doctor) => void;
@@ -10,72 +10,69 @@ interface DoctorSelectionProps {
 const DoctorSelection: React.FC<DoctorSelectionProps> = ({ onSelectDoctor, onBack }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSpecialty, setSelectedSpecialty] = useState('all');
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const doctors: Doctor[] = [
-    {
-      id: '1',
-      name: 'Dr. Priya Sharma',
-      specialty: 'Cardiologist',
-      experience: '15 years',
-      rating: 4.9,
-      image: 'https://images.pexels.com/photos/5452293/pexels-photo-5452293.jpeg?auto=compress&cs=tinysrgb&w=400',
-      availability: ['9:00 AM', '10:00 AM', '2:00 PM', '3:00 PM']
-    },
-    {
-      id: '2',
-      name: 'Dr. Rajesh Kumar',
-      specialty: 'Dermatologist',
-      experience: '12 years',
-      rating: 4.8,
-      image: 'https://images.pexels.com/photos/6749778/pexels-photo-6749778.jpeg?auto=compress&cs=tinysrgb&w=400',
-      availability: ['10:00 AM', '11:00 AM', '1:00 PM', '4:00 PM']
-    },
-    {
-      id: '3',
-      name: 'Dr. Anita Patel',
-      specialty: 'Pediatrician',
-      experience: '18 years',
-      rating: 4.9,
-      image: 'https://images.pexels.com/photos/5452201/pexels-photo-5452201.jpeg?auto=compress&cs=tinysrgb&w=400',
-      availability: ['9:00 AM', '11:00 AM', '2:00 PM', '5:00 PM']
-    },
-    {
-      id: '4',
-      name: 'Dr. Vikram Singh',
-      specialty: 'Orthopedic',
-      experience: '20 years',
-      rating: 4.7,
-      image: 'https://images.pexels.com/photos/6749774/pexels-photo-6749774.jpeg?auto=compress&cs=tinysrgb&w=400',
-      availability: ['8:00 AM', '10:00 AM', '1:00 PM', '3:00 PM']
-    },
-    {
-      id: '5',
-      name: 'Dr. Meera Reddy',
-      specialty: 'Gynecologist',
-      experience: '14 years',
-      rating: 4.8,
-      image: 'https://images.pexels.com/photos/5452274/pexels-photo-5452274.jpeg?auto=compress&cs=tinysrgb&w=400',
-      availability: ['9:00 AM', '12:00 PM', '2:00 PM', '4:00 PM']
-    },
-    {
-      id: '6',
-      name: 'Dr. Arjun Gupta',
-      specialty: 'Neurologist',
-      experience: '16 years',
-      rating: 4.9,
-      image: 'https://images.pexels.com/photos/6749777/pexels-photo-6749777.jpeg?auto=compress&cs=tinysrgb&w=400',
-      availability: ['10:00 AM', '11:00 AM', '3:00 PM', '5:00 PM']
+  useEffect(() => {
+    fetchDoctors();
+  }, []);
+
+  const fetchDoctors = async () => {
+    try {
+      setLoading(true);
+      const doctorsData = await apiService.getDoctors();
+      setDoctors(doctorsData);
+    } catch (err) {
+      setError('Failed to load doctors. Please try again.');
+      console.error('Error fetching doctors:', err);
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
 
-  const specialties = ['all', 'Cardiologist', 'Dermatologist', 'Pediatrician', 'Orthopedic', 'Gynecologist', 'Neurologist'];
+  const handleSearch = async () => {
+    if (!searchTerm.trim()) {
+      fetchDoctors();
+      return;
+    }
 
-  const filteredDoctors = doctors.filter(doctor => {
-    const matchesSearch = doctor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         doctor.specialty.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesSpecialty = selectedSpecialty === 'all' || doctor.specialty === selectedSpecialty;
-    return matchesSearch && matchesSpecialty;
-  });
+    try {
+      setLoading(true);
+      const searchResults = await apiService.searchDoctors(
+        selectedSpecialty !== 'all' ? selectedSpecialty : undefined,
+        searchTerm
+      );
+      setDoctors(searchResults);
+    } catch (err) {
+      setError('Search failed. Please try again.');
+      console.error('Error searching doctors:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSpecialtyFilter = async (specialty: string) => {
+    setSelectedSpecialty(specialty);
+    
+    if (specialty === 'all') {
+      fetchDoctors();
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const filteredDoctors = await apiService.searchDoctors(specialty);
+      setDoctors(filteredDoctors);
+    } catch (err) {
+      setError('Filter failed. Please try again.');
+      console.error('Error filtering doctors:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const specialties = ['all', 'Cardiologist', 'Dermatologist', 'Pediatrician', 'Neurologist'];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -105,8 +102,15 @@ const DoctorSelection: React.FC<DoctorSelectionProps> = ({ onSelectDoctor, onBac
               placeholder="Search doctors or specialties..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
               className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
             />
+            <button
+              onClick={handleSearch}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 bg-blue-600 text-white px-3 py-1 rounded-md text-sm hover:bg-blue-700 transition-colors"
+            >
+              Search
+            </button>
           </div>
 
           <div className="flex items-center space-x-2 overflow-x-auto pb-2">
@@ -114,7 +118,7 @@ const DoctorSelection: React.FC<DoctorSelectionProps> = ({ onSelectDoctor, onBac
             {specialties.map((specialty) => (
               <button
                 key={specialty}
-                onClick={() => setSelectedSpecialty(specialty)}
+                onClick={() => handleSpecialtyFilter(specialty)}
                 className={`px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap ${
                   selectedSpecialty === specialty
                     ? 'bg-blue-600 text-white shadow-lg'
@@ -127,59 +131,78 @@ const DoctorSelection: React.FC<DoctorSelectionProps> = ({ onSelectDoctor, onBac
           </div>
         </div>
 
+        {/* Error Message */}
+        {error && (
+          <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
+            {error}
+          </div>
+        )}
+
+        {/* Loading State */}
+        {loading && (
+          <div className="text-center py-12">
+            <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading doctors...</p>
+          </div>
+        )}
+
         {/* Doctors Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredDoctors.map((doctor) => (
-            <div
-              key={doctor.id}
-              className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 cursor-pointer"
-              onClick={() => onSelectDoctor(doctor)}
-            >
-              <div className="p-6">
-                <div className="flex items-center space-x-4 mb-4">
-                  <img
-                    src={doctor.image}
-                    alt={doctor.name}
-                    className="w-16 h-16 rounded-full object-cover border-2 border-blue-100"
-                  />
-                  <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-gray-900">{doctor.name}</h3>
-                    <p className="text-blue-600 font-medium">{doctor.specialty}</p>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-600">Experience</span>
-                    <span className="font-semibold text-gray-900">{doctor.experience}</span>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-600">Rating</span>
-                    <div className="flex items-center">
-                      <Star className="w-4 h-4 text-yellow-400 fill-current mr-1" />
-                      <span className="font-semibold text-gray-900">{doctor.rating}</span>
+        {!loading && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {doctors.map((doctor) => (
+              <div
+                key={doctor.id}
+                className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 cursor-pointer"
+                onClick={() => onSelectDoctor(doctor)}
+              >
+                <div className="p-6">
+                  <div className="flex items-center space-x-4 mb-4">
+                    <img
+                      src={doctor.image}
+                      alt={doctor.name}
+                      className="w-16 h-16 rounded-full object-cover border-2 border-blue-100"
+                    />
+                    <div className="flex-1">
+                      <h3 className="text-lg font-semibold text-gray-900">{doctor.name}</h3>
+                      <p className="text-blue-600 font-medium">{doctor.specialty}</p>
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-600">Available Today</span>
-                    <div className="flex items-center text-green-600">
-                      <Clock className="w-4 h-4 mr-1" />
-                      <span className="text-sm font-medium">{doctor.availability.length} slots</span>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-600">Experience</span>
+                      <span className="font-semibold text-gray-900">{doctor.experience}</span>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-600">Rating</span>
+                      <div className="flex items-center">
+                        <Star className="w-4 h-4 text-yellow-400 fill-current mr-1" />
+                        <span className="font-semibold text-gray-900">{doctor.rating}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-600">Available Slots</span>
+                      <div className="flex items-center text-green-600">
+                        <Clock className="w-4 h-4 mr-1" />
+                        <span className="text-sm font-medium">
+                          {doctor.availableSlots.filter(slot => slot.available).length} slots
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <button className="w-full mt-6 bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3 px-4 rounded-xl font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl">
-                  Book Appointment
-                </button>
+                  <button className="w-full mt-6 bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3 px-4 rounded-xl font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl">
+                    Book Appointment
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
 
-        {filteredDoctors.length === 0 && (
+        {!loading && doctors.length === 0 && (
           <div className="text-center py-12">
             <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
               <Search className="w-8 h-8 text-gray-400" />
