@@ -4,7 +4,7 @@ A modern medical appointment booking system built with React, TypeScript, and Ta
 
 ## Features
 
-- **User Authentication**: Secure login system with demo credentials
+- **User Authentication**: Secure login and signup system with demo credentials
 - **Doctor Selection**: Browse and search for doctors by specialty
 - **Appointment Booking**: Book appointments with available time slots
 - **Dashboard**: View upcoming and past appointments
@@ -40,13 +40,7 @@ A modern medical appointment booking system built with React, TypeScript, and Ta
 
 ### Running the Application
 
-#### Option 1: Run Frontend Only (Demo Mode)
-```bash
-npm run dev
-```
-This will start the frontend with mock data at `http://localhost:5173`
-
-#### Option 2: Run Full Stack (Frontend + API)
+#### Option 1: Run Full Stack (Frontend + API)
 ```bash
 npm run dev:full
 ```
@@ -54,11 +48,27 @@ This will start both the frontend and the demo API server:
 - Frontend: `http://localhost:5173`
 - API Server: `http://localhost:3001`
 
+#### Option 2: Run Frontend Only (Demo Mode)
+```bash
+npm run dev
+```
+This will start the frontend with mock data at `http://localhost:5173`
+
 #### Option 3: Run API Server Only
 ```bash
 npm run server
 ```
 This will start only the demo API server at `http://localhost:3001`
+
+## Demo Credentials
+
+### Login Credentials
+- **Email**: `demo@example.com`
+- **Password**: `password123`
+- **Or use any email/password combination**
+
+### Signup
+You can also create a new account using the signup form with any valid information.
 
 ## Demo API
 
@@ -66,6 +76,7 @@ The project includes a comprehensive demo API with the following endpoints:
 
 ### Authentication
 - `POST /api/auth/login` - User login (accepts any credentials)
+- `POST /api/auth/signup` - User registration
 
 ### Doctors
 - `GET /api/doctors` - Get all doctors
@@ -89,11 +100,6 @@ The project includes a comprehensive demo API with the following endpoints:
 
 For detailed API documentation, see [API_DOCUMENTATION.md](./API_DOCUMENTATION.md)
 
-## Demo Credentials
-
-- **Email**: Any valid email format
-- **Password**: Any password (minimum 1 character)
-
 ## Project Structure
 
 ```
@@ -101,6 +107,7 @@ Shedula-demo/
 ├── src/
 │   ├── components/          # React components
 │   │   ├── Login.tsx
+│   │   ├── Signup.tsx
 │   │   ├── Dashboard.tsx
 │   │   ├── DoctorSelection.tsx
 │   │   ├── TimeSlotPicker.tsx
@@ -113,6 +120,7 @@ Shedula-demo/
 ├── server/                # Demo API server
 │   └── index.js
 ├── API_DOCUMENTATION.md   # Complete API documentation
+├── DEPLOYMENT_GUIDE.md    # Deployment instructions
 └── test-api.js           # API test script
 ```
 
@@ -137,6 +145,11 @@ This will run a comprehensive test of all API endpoints and display the results.
 
 ## Features in Detail
 
+### Authentication
+- **Login**: Use demo credentials or any email/password
+- **Signup**: Create new accounts with full validation
+- **Demo Mode**: Accepts any credentials for testing
+
 ### Doctor Selection
 - Browse doctors by specialty
 - View doctor ratings and experience
@@ -159,6 +172,26 @@ This will run a comprehensive test of all API endpoints and display the results.
 - Update personal information
 - View appointment history
 - Manage account settings
+
+## Deployment
+
+For deployment instructions, see [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md)
+
+### Quick Deploy Options
+
+#### Frontend (Vercel)
+```bash
+npm install -g vercel
+vercel
+```
+
+#### Backend (Railway)
+```bash
+npm install -g @railway/cli
+railway login
+railway init
+railway up
+```
 
 ## Contributing
 

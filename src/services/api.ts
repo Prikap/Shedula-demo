@@ -93,6 +93,13 @@ class ApiService {
     });
   }
 
+  async signup(userData: { name: string; email: string; password: string; phone: string }): Promise<LoginResponse> {
+    return this.request('/auth/signup', {
+      method: 'POST',
+      body: JSON.stringify(userData),
+    });
+  }
+
   // Doctors
   async getDoctors(): Promise<Doctor[]> {
     return this.request('/doctors');

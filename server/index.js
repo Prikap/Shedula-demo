@@ -5,8 +5,29 @@ import { v4 as uuidv4 } from 'uuid';
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Middleware
-app.use(cors());
+// CORS configuration for production
+const allowedOrigins = [
+  'http://localhost:5173', // Development
+  'https://shedula-frontend.onrender.com', // Render frontend
+  'https://shedula-demo.onrender.com', // Alternative frontend name
+  process.env.CORS_ORIGIN // Environment variable
+].filter(Boolean); // Remove undefined values
+
+app.use(cors({
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.log('CORS blocked origin:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true
+}));
+
 app.use(express.json());
 
 // Demo data
@@ -235,6 +256,32 @@ app.post('/api/auth/login', (req, res) => {
   });
 });
 
+// User signup (demo)
+app.post('/api/auth/signup', (req, res) => {
+  const { name, email, password, phone } = req.body;
+  
+  // Check if user already exists
+  const existingUser = users.find(u => u.email === email);
+  if (existingUser) {
+    return res.status(400).json({ message: 'User already exists with this email' });
+  }
+
+  // Create new user
+  const newUser = {
+    id: uuidv4(),
+    name,
+    email,
+    phone: phone || '+1-555-0000'
+  };
+
+  users.push(newUser);
+
+  res.status(201).json({
+    user: newUser,
+    token: 'demo-token-' + Date.now()
+  });
+});
+
 // Get user profile
 app.get('/api/users/:id', (req, res) => {
   const user = users.find(u => u.id === req.params.id);
@@ -315,6 +362,7 @@ app.listen(PORT, () => {
   console.log(`   PATCH /api/appointments/:id`);
   console.log(`   DELETE /api/appointments/:id`);
   console.log(`   POST /api/auth/login`);
+  console.log(`   POST /api/auth/signup`);
   console.log(`   GET  /api/users/:id`);
   console.log(`   PUT  /api/users/:id`);
   console.log(`   GET  /api/doctors/search`);

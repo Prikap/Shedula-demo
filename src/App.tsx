@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import Login from './components/Login';
+import Signup from './components/Signup';
 import Dashboard from './components/Dashboard';
 import DoctorSelection from './components/DoctorSelection';
 import TimeSlotPicker from './components/TimeSlotPicker';
@@ -8,12 +9,24 @@ import Profile from './components/Profile';
 import { User, Doctor } from './services/api';
 
 function App() {
-  const [currentView, setCurrentView] = useState<'login' | 'dashboard' | 'doctors' | 'booking' | 'confirmation' | 'profile'>('login');
+  const [currentView, setCurrentView] = useState<'login' | 'signup' | 'dashboard' | 'doctors' | 'booking' | 'confirmation' | 'profile'>('login');
   const [user, setUser] = useState<User | null>(null);
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<{ date: string; time: string } | null>(null);
 
   const handleLogin = (userData: { name: string; email: string }) => {
+    // Create a user object with the required fields
+    const newUser: User = {
+      id: 'user123', // For demo purposes
+      name: userData.name,
+      email: userData.email,
+      phone: '+1-555-0000'
+    };
+    setUser(newUser);
+    setCurrentView('dashboard');
+  };
+
+  const handleSignup = (userData: { name: string; email: string }) => {
     // Create a user object with the required fields
     const newUser: User = {
       id: 'user123', // For demo purposes
@@ -58,8 +71,19 @@ function App() {
     }
   };
 
+  const switchToSignup = () => {
+    setCurrentView('signup');
+  };
+
+  const switchToLogin = () => {
+    setCurrentView('login');
+  };
+
   if (!user) {
-    return <Login onLogin={handleLogin} />;
+    if (currentView === 'signup') {
+      return <Signup onSignup={handleSignup} onSwitchToLogin={switchToLogin} />;
+    }
+    return <Login onLogin={handleLogin} onSwitchToSignup={switchToSignup} />;
   }
 
   return (
