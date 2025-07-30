@@ -1,20 +1,39 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, User, Plus, Heart, Bell } from 'lucide-react';
-import { User as UserType, Appointment } from '../App';
+import { apiService, User as UserType, Appointment } from '../services/api';
 
 interface DashboardProps {
   user: UserType;
-  appointments: Appointment[];
   onBookAppointment: () => void;
   onViewProfile: () => void;
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ 
   user, 
-  appointments,
   onBookAppointment,
   onViewProfile
 }) => {
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    fetchAppointments();
+  }, []);
+
+  const fetchAppointments = async () => {
+    try {
+      setLoading(true);
+      const userAppointments = await apiService.getUserAppointments(user.id);
+      setAppointments(userAppointments);
+    } catch (err) {
+      setError('Failed to load appointments. Please try again.');
+      console.error('Error fetching appointments:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const upcomingAppointments = appointments.filter(apt => apt.status === 'upcoming');
   const today = new Date().toISOString().split('T')[0];
   const todayAppointments = upcomingAppointments.filter(apt => apt.date === today);
@@ -52,15 +71,23 @@ const Dashboard: React.FC<DashboardProps> = ({
       </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Error Message */}
+        {error && (
+          <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
+            {error}
+          </div>
+        )}
+
         {/* Welcome Section */}
         <div className="mb-8">
           <h2 className="text-3xl font-bold text-gray-900 mb-2">
             Welcome, {user.name.split(' ')[0]}! 👋
           </h2>
           <p className="text-gray-600">
-            {todayAppointments.length > 0 
-              ? `You have ${todayAppointments.length} appointment${todayAppointments.length > 1 ? 's' : ''} today`
-              : 'No appointments today. Take care of your health!'
+            {loading ? 'Loading your appointments...' : 
+              todayAppointments.length > 0 
+                ? `You have ${todayAppointments.length} appointment${todayAppointments.length > 1 ? 's' : ''} today`
+                : 'No appointments today. Take care of your health!'
             }
           </p>
         </div>
@@ -84,7 +111,9 @@ const Dashboard: React.FC<DashboardProps> = ({
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-1">My Appointments</h3>
-                <p className="text-gray-600">{upcomingAppointments.length} appointments</p>
+                <p className="text-gray-600">
+                  {loading ? 'Loading...' : `${upcomingAppointments.length} appointments`}
+                </p>
               </div>
               <Calendar className="w-8 h-8 text-blue-500" />
             </div>
@@ -94,7 +123,9 @@ const Dashboard: React.FC<DashboardProps> = ({
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-1">Today</h3>
-                <p className="text-gray-600">{todayAppointments.length} appointments</p>
+                <p className="text-gray-600">
+                  {loading ? 'Loading...' : `${todayAppointments.length} appointments`}
+                </p>
               </div>
               <Clock className="w-8 h-8 text-green-500" />
             </div>
@@ -113,7 +144,12 @@ const Dashboard: React.FC<DashboardProps> = ({
             </button>
           </div>
 
-          {upcomingAppointments.length === 0 ? (
+          {loading ? (
+            <div className="text-center py-12">
+              <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading appointments...</p>
+            </div>
+          ) : upcomingAppointments.length === 0 ? (
             <div className="text-center py-12">
               <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
               <h4 className="text-lg font-medium text-gray-900 mb-2">No upcoming appointments</h4>

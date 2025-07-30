@@ -5,60 +5,23 @@ import DoctorSelection from './components/DoctorSelection';
 import TimeSlotPicker from './components/TimeSlotPicker';
 import BookingConfirmation from './components/BookingConfirmation';
 import Profile from './components/Profile';
-
-export interface Doctor {
-  id: string;
-  name: string;
-  specialty: string;
-  experience: string;
-  rating: number;
-  image: string;
-  availability: string[];
-}
-
-export interface Appointment {
-  id: string;
-  doctorName: string;
-  specialty: string;
-  date: string;
-  time: string;
-  status: 'upcoming' | 'completed' | 'cancelled';
-  type: string;
-}
-
-export interface User {
-  name: string;
-  email: string;
-}
+import { User, Doctor } from './services/api';
 
 function App() {
   const [currentView, setCurrentView] = useState<'login' | 'dashboard' | 'doctors' | 'booking' | 'confirmation' | 'profile'>('login');
   const [user, setUser] = useState<User | null>(null);
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<{ date: string; time: string } | null>(null);
-  const [appointments, setAppointments] = useState<Appointment[]>([
-    {
-      id: '1',
-      doctorName: 'Dr. Priya Sharma',
-      specialty: 'Cardiologist',
-      date: '2025-01-25',
-      time: '10:00 AM',
-      status: 'upcoming',
-      type: 'Consultation'
-    },
-    {
-      id: '2',
-      doctorName: 'Dr. Rajesh Kumar',
-      specialty: 'Dermatologist',
-      date: '2025-01-20',
-      time: '2:00 PM',
-      status: 'completed',
-      type: 'Check-up'
-    }
-  ]);
 
-  const handleLogin = (userData: User) => {
-    setUser(userData);
+  const handleLogin = (userData: { name: string; email: string }) => {
+    // Create a user object with the required fields
+    const newUser: User = {
+      id: 'user123', // For demo purposes
+      name: userData.name,
+      email: userData.email,
+      phone: '+1-555-0000'
+    };
+    setUser(newUser);
     setCurrentView('dashboard');
   };
 
@@ -73,21 +36,10 @@ function App() {
   };
 
   const handleBookingConfirm = () => {
-    if (selectedDoctor && selectedSlot) {
-      const newAppointment: Appointment = {
-        id: Date.now().toString(),
-        doctorName: selectedDoctor.name,
-        specialty: selectedDoctor.specialty,
-        date: selectedSlot.date,
-        time: selectedSlot.time,
-        status: 'upcoming',
-        type: 'Consultation'
-      };
-      setAppointments([newAppointment, ...appointments]);
-      setCurrentView('dashboard');
-      setSelectedDoctor(null);
-      setSelectedSlot(null);
-    }
+    // Reset the booking flow
+    setCurrentView('dashboard');
+    setSelectedDoctor(null);
+    setSelectedSlot(null);
   };
 
   const navigateToProfile = () => {
@@ -115,7 +67,6 @@ function App() {
       {currentView === 'dashboard' && (
         <Dashboard 
           user={user}
-          appointments={appointments}
           onBookAppointment={() => setCurrentView('doctors')}
           onViewProfile={navigateToProfile}
         />
@@ -144,7 +95,6 @@ function App() {
       {currentView === 'profile' && (
         <Profile 
           user={user}
-          appointments={appointments}
           onBack={navigateBack}
         />
       )}

@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ArrowLeft, CheckCircle, Calendar, Clock, User, Phone, MapPin } from 'lucide-react';
-import { Doctor } from '../App';
+import { apiService, Doctor } from '../services/api';
 
 interface BookingConfirmationProps {
   doctor: Doctor;
@@ -15,6 +15,9 @@ const BookingConfirmation: React.FC<BookingConfirmationProps> = ({
   onConfirm, 
   onBack 
 }) => {
+  const [isBooking, setIsBooking] = useState(false);
+  const [error, setError] = useState('');
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       weekday: 'long',
@@ -22,6 +25,31 @@ const BookingConfirmation: React.FC<BookingConfirmationProps> = ({
       month: 'long',
       day: 'numeric'
     });
+  };
+
+  const handleConfirmBooking = async () => {
+    try {
+      setIsBooking(true);
+      setError('');
+
+      // For demo purposes, using a mock user ID
+      const mockUserId = 'user123';
+      
+      await apiService.bookAppointment({
+        doctorId: doctor.id,
+        date: slot.date,
+        time: slot.time,
+        patientId: mockUserId,
+        type: 'Consultation'
+      });
+
+      onConfirm();
+    } catch (err) {
+      setError('Failed to book appointment. Please try again.');
+      console.error('Booking error:', err);
+    } finally {
+      setIsBooking(false);
+    }
   };
 
   return (
@@ -51,6 +79,13 @@ const BookingConfirmation: React.FC<BookingConfirmationProps> = ({
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Almost Done!</h2>
           <p className="text-gray-600">Please review your appointment details before confirming</p>
         </div>
+
+        {/* Error Message */}
+        {error && (
+          <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
+            {error}
+          </div>
+        )}
 
         {/* Appointment Details Card */}
         <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden mb-8">
@@ -144,7 +179,7 @@ const BookingConfirmation: React.FC<BookingConfirmationProps> = ({
           </div>
         </div>
 
-        {/* Important N */}
+        {/* Important Notes */}
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-8">
           <h4 className="font-semibold text-amber-900 mb-2">Important Notes:</h4>
           <ul className="text-sm text-amber-800 space-y-1">
@@ -159,15 +194,24 @@ const BookingConfirmation: React.FC<BookingConfirmationProps> = ({
         <div className="flex flex-col sm:flex-row gap-4">
           <button
             onClick={onBack}
-            className="flex-1 bg-white text-gray-700 py-4 px-6 rounded-xl font-semibold border-2 border-gray-300 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200"
+            disabled={isBooking}
+            className="flex-1 bg-white text-gray-700 py-4 px-6 rounded-xl font-semibold border-2 border-gray-300 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Go Back
           </button>
           <button
-            onClick={onConfirm}
-            className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-4 px-6 rounded-xl font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+            onClick={handleConfirmBooking}
+            disabled={isBooking}
+            className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-4 px-6 rounded-xl font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
           >
-            Confirm Appointment
+            {isBooking ? (
+              <>
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                Booking...
+              </>
+            ) : (
+              'Confirm Appointment'
+            )}
           </button>
         </div>
       </div>
