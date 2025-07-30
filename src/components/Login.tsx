@@ -3,9 +3,10 @@ import { apiService } from '../services/api';
 
 interface LoginProps {
   onLogin: (user: { name: string; email: string }) => void;
+  onSwitchToSignup: () => void;
 }
 
-const Login: React.FC<LoginProps> = ({ onLogin }) => {
+const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -28,6 +29,11 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleDemoLogin = () => {
+    setEmail('demo@example.com');
+    setPassword('password123');
   };
 
   return (
@@ -86,12 +92,37 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
               {isLoading ? 'Signing in...' : 'Sign in'}
             </button>
           </div>
+
+          <div>
+            <button
+              type="button"
+              onClick={handleDemoLogin}
+              className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              Use Demo Credentials
+            </button>
+          </div>
         </form>
         
         <div className="text-center">
           <p className="text-sm text-gray-600">
-            Demo credentials: Use any email and password
+            Don't have an account?{' '}
+            <button
+              onClick={onSwitchToSignup}
+              className="text-blue-600 hover:text-blue-800 font-medium"
+            >
+              Sign up
+            </button>
           </p>
+        </div>
+
+        <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
+          <h4 className="text-sm font-medium text-blue-900 mb-2">Demo Credentials</h4>
+          <div className="text-xs text-blue-800 space-y-1">
+            <p><strong>Email:</strong> demo@example.com</p>
+            <p><strong>Password:</strong> password123</p>
+            <p className="text-blue-600 mt-2">Or use any email/password combination</p>
+          </div>
         </div>
       </div>
     </div>
