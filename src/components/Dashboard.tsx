@@ -1,197 +1,248 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, User, Plus, Heart, Bell } from 'lucide-react';
-import { apiService, User as UserType, Appointment } from '../services/api';
+import { useNavigate } from 'react-router-dom';
+import { User, Appointment, Stats } from '../services/api';
+import { Calendar, Clock, User as UserIcon, Activity, Plus, ArrowRight } from 'lucide-react';
 
 interface DashboardProps {
-  user: UserType;
+  user: User;
   onBookAppointment: () => void;
   onViewProfile: () => void;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ 
-  user, 
-  onBookAppointment,
-  onViewProfile
-}) => {
+const Dashboard: React.FC<DashboardProps> = ({ user, onBookAppointment, onViewProfile }) => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [stats, setStats] = useState<Stats | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    fetchAppointments();
+    // Simulate loading data
+    setTimeout(() => {
+      setAppointments([
+        {
+          id: '1',
+          doctorName: 'Dr. Priya Sharma',
+          specialty: 'Cardiologist',
+          date: '2025-01-25',
+          time: '10:00 AM',
+          status: 'upcoming',
+          type: 'Consultation',
+          patientId: 'user123'
+        },
+        {
+          id: '2',
+          doctorName: 'Dr. Rajesh Kumar',
+          specialty: 'Dermatologist',
+          date: '2025-01-20',
+          time: '2:00 PM',
+          status: 'completed',
+          type: 'Check-up',
+          patientId: 'user123'
+        }
+      ]);
+      setStats({
+        totalAppointments: 2,
+        upcomingAppointments: 1,
+        completedAppointments: 1,
+        cancelledAppointments: 0,
+        totalDoctors: 4
+      });
+      setIsLoading(false);
+    }, 1000);
   }, []);
 
-  const fetchAppointments = async () => {
-    try {
-      setLoading(true);
-      const userAppointments = await apiService.getUserAppointments(user.id);
-      setAppointments(userAppointments);
-    } catch (err) {
-      setError('Failed to load appointments. Please try again.');
-      console.error('Error fetching appointments:', err);
-    } finally {
-      setLoading(false);
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'upcoming':
+        return 'bg-blue-100 text-blue-800';
+      case 'completed':
+        return 'bg-green-100 text-green-800';
+      case 'cancelled':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
     }
   };
 
-  const upcomingAppointments = appointments.filter(apt => apt.status === 'upcoming');
-  const today = new Date().toISOString().split('T')[0];
-  const todayAppointments = upcomingAppointments.filter(apt => apt.date === today);
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="flex items-center space-x-2">
+          <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+          <span className="text-gray-600">Loading dashboard...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <div className="flex items-center">
-                <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center mr-3">
-                  <Heart className="w-5 h-5 text-white" />
-                </div>
-                <h1 className="text-xl font-bold text-gray-900">Shedula</h1>
-              </div>
+    <div className="space-y-8">
+      {/* Welcome Section */}
+      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-8 text-white">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold mb-2">Welcome back, {user.name}!</h1>
+            <p className="text-blue-100 text-lg">Manage your healthcare appointments with ease</p>
+          </div>
+          <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
+            <UserIcon className="w-8 h-8" />
+          </div>
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <button
+          onClick={() => navigate('/doctors')}
+          className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md transition-all duration-200 group"
+        >
+          <div className="flex items-center space-x-4">
+            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-lg flex items-center justify-center">
+              <Plus className="w-6 h-6 text-white" />
             </div>
-            <div className="flex items-center space-x-4">
-              <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
-                <Bell className="w-5 h-5" />
-              </button>
+            <div className="text-left">
+              <h3 className="font-semibold text-gray-900">Book Appointment</h3>
+              <p className="text-sm text-gray-600">Schedule a new consultation</p>
+            </div>
+            <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-blue-600 transition-colors" />
+          </div>
+        </button>
+
+        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+          <div className="flex items-center space-x-4">
+            <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-500 rounded-lg flex items-center justify-center">
+              <Calendar className="w-6 h-6 text-white" />
+            </div>
+            <div className="text-left">
+              <h3 className="font-semibold text-gray-900">{stats?.upcomingAppointments || 0}</h3>
+              <p className="text-sm text-gray-600">Upcoming</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+          <div className="flex items-center space-x-4">
+            <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
+              <Clock className="w-6 h-6 text-white" />
+            </div>
+            <div className="text-left">
+              <h3 className="font-semibold text-gray-900">{stats?.totalAppointments || 0}</h3>
+              <p className="text-sm text-gray-600">Total</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+          <div className="flex items-center space-x-4">
+            <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
+              <Activity className="w-6 h-6 text-white" />
+            </div>
+            <div className="text-left">
+              <h3 className="font-semibold text-gray-900">{stats?.totalDoctors || 0}</h3>
+              <p className="text-sm text-gray-600">Doctors</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Recent Appointments */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h2 className="text-xl font-semibold text-gray-900">Recent Appointments</h2>
+        </div>
+        <div className="divide-y divide-gray-200">
+          {appointments.length === 0 ? (
+            <div className="px-6 py-8 text-center">
+              <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No appointments yet</h3>
+              <p className="text-gray-600 mb-4">Schedule your first appointment to get started</p>
               <button
-                onClick={onViewProfile}
-                className="flex items-center space-x-2 text-gray-700 hover:text-gray-900 transition-colors"
+                onClick={() => navigate('/doctors')}
+                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
-                <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full flex items-center justify-center">
-                  <User className="w-4 h-4 text-white" />
-                </div>
-                <span className="font-medium">{user.name}</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Error Message */}
-        {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
-            {error}
-          </div>
-        )}
-
-        {/* Welcome Section */}
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">
-            Welcome, {user.name.split(' ')[0]}! 👋
-          </h2>
-          <p className="text-gray-600">
-            {loading ? 'Loading your appointments...' : 
-              todayAppointments.length > 0 
-                ? `You have ${todayAppointments.length} appointment${todayAppointments.length > 1 ? 's' : ''} today`
-                : 'No appointments today. Take care of your health!'
-            }
-          </p>
-        </div>
-
-        {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <button
-            onClick={onBookAppointment}
-            className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 group"
-          >
-            <div className="flex items-center justify-between">
-              <div className="text-left">
-                <h3 className="text-lg font-semibold mb-1">Book Appointment</h3>
-                <p className="text-blue-100">Find the right doctor</p>
-              </div>
-              <Plus className="w-8 h-8 group-hover:scale-110 transition-transform" />
-            </div>
-          </button>
-
-          <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-1">My Appointments</h3>
-                <p className="text-gray-600">
-                  {loading ? 'Loading...' : `${upcomingAppointments.length} appointments`}
-                </p>
-              </div>
-              <Calendar className="w-8 h-8 text-blue-500" />
-            </div>
-          </div>
-
-          <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-1">Today</h3>
-                <p className="text-gray-600">
-                  {loading ? 'Loading...' : `${todayAppointments.length} appointments`}
-                </p>
-              </div>
-              <Clock className="w-8 h-8 text-green-500" />
-            </div>
-          </div>
-        </div>
-
-        {/* Upcoming Appointments */}
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-semibold text-gray-900">Upcoming Appointments</h3>
-            <button
-              onClick={onViewProfile}
-              className="text-blue-600 hover:text-blue-800 font-medium transition-colors"
-            >
-              View All
-            </button>
-          </div>
-
-          {loading ? (
-            <div className="text-center py-12">
-              <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-              <p className="text-gray-600">Loading appointments...</p>
-            </div>
-          ) : upcomingAppointments.length === 0 ? (
-            <div className="text-center py-12">
-              <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <h4 className="text-lg font-medium text-gray-900 mb-2">No upcoming appointments</h4>
-              <p className="text-gray-600 mb-6">Book your first appointment to get started</p>
-              <button
-                onClick={onBookAppointment}
-                className="bg-blue-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-blue-700 transition-colors"
-              >
-                Book Now
+                <Plus className="w-4 h-4 mr-2" />
+                Book Appointment
               </button>
             </div>
           ) : (
-            <div className="space-y-4">
-              {upcomingAppointments.slice(0, 3).map((appointment) => (
-                <div
-                  key={appointment.id}
-                  className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
-                >
+            appointments.map((appointment) => (
+              <div key={appointment.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
+                <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl flex items-center justify-center">
-                      <User className="w-6 h-6 text-white" />
+                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-lg flex items-center justify-center">
+                      <UserIcon className="w-5 h-5 text-white" />
                     </div>
                     <div>
-                      <h4 className="font-semibold text-gray-900">{appointment.doctorName}</h4>
+                      <h3 className="font-semibold text-gray-900">{appointment.doctorName}</h3>
                       <p className="text-sm text-gray-600">{appointment.specialty}</p>
+                      <div className="flex items-center space-x-4 mt-1">
+                        <span className="text-sm text-gray-500">
+                          {formatDate(appointment.date)} at {appointment.time}
+                        </span>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(appointment.status)}`}>
+                          {appointment.status}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="font-medium text-gray-900">
-                      {new Date(appointment.date).toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric'
-                      })}
-                    </p>
-                    <p className="text-sm text-gray-600">{appointment.time}</p>
-                  </div>
+                  <button className="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                    View Details
+                  </button>
                 </div>
-              ))}
-            </div>
+              </div>
+            ))
           )}
         </div>
       </div>
+
+      {/* Quick Stats */}
+      {stats && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Total Appointments</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.totalAppointments}</p>
+              </div>
+              <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                <Calendar className="w-4 h-4 text-blue-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Completed</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.completedAppointments}</p>
+              </div>
+              <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                <Clock className="w-4 h-4 text-green-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Available Doctors</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.totalDoctors}</p>
+              </div>
+              <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                <UserIcon className="w-4 h-4 text-purple-600" />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
