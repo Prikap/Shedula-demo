@@ -34,7 +34,7 @@ app.use(express.json());
 let doctors = [
   {
     id: '1',
-    name: 'Dr. Priya Sharma',
+    name: 'Dr. Shanaya',
     specialty: 'Cardiologist',
     experience: '15 years',
     rating: 4.8,
@@ -52,7 +52,7 @@ let doctors = [
   },
   {
     id: '2',
-    name: 'Dr. Rajesh Kumar',
+    name: 'Dr. Anil Kumar',
     specialty: 'Dermatologist',
     experience: '12 years',
     rating: 4.6,
@@ -69,7 +69,7 @@ let doctors = [
   },
   {
     id: '3',
-    name: 'Dr. Sarah Johnson',
+    name: 'Dr. Shivani Patel',
     specialty: 'Pediatrician',
     experience: '18 years',
     rating: 4.9,
@@ -86,7 +86,7 @@ let doctors = [
   },
   {
     id: '4',
-    name: 'Dr. Michael Chen',
+    name: 'Dr. Rohan Upadhyay',
     specialty: 'Neurologist',
     experience: '20 years',
     rating: 4.7,

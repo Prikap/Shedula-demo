@@ -210,6 +210,8 @@ const BookingConfirmationRoute: React.FC = () => {
   }
   
   const handleConfirm = () => {
+    // Simulate successful booking
+    alert('Appointment booked successfully!');
     clearBooking();
     navigate('/dashboard');
   };
