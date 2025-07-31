@@ -7,6 +7,9 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+DEPLOYMENT_GUIDE.md
+.env
+
 node_modules
 dist
 dist-ssr
@@ -23,3 +26,9 @@ dist-ssr
 *.sln
 *.sw?
 .env
+
+DEPLOYMENT_CHECKLIST.md
+render.yaml
+vercel.json
+test-api.js
+deploy-render.sh
