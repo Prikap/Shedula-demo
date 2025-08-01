@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, CheckCircle, Calendar, Clock, User, Phone, MapPin } from 'lucide-react';
-import { Doctor } from '../services/api';
+import { ArrowLeft, CheckCircle, Calendar, Clock, User, Phone, MapPin, FileText } from 'lucide-react';
+import { Doctor, apiService } from '../services/api';
 import { useBooking } from '../contexts/BookingContext';
+import { useAuth } from '../contexts/AuthContext';
 
 interface BookingConfirmationProps {
   doctor: Doctor;
@@ -19,8 +20,12 @@ const BookingConfirmation: React.FC<BookingConfirmationProps> = ({
 }) => {
   const [isBooking, setIsBooking] = useState(false);
   const [error, setError] = useState('');
+  const [symptoms, setSymptoms] = useState('');
+  const [notes, setNotes] = useState('');
+  const [appointmentType, setAppointmentType] = useState('Consultation');
   const navigate = useNavigate();
   const { addAppointment, clearBooking } = useBooking();
+  const { user } = useAuth();
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -32,14 +37,25 @@ const BookingConfirmation: React.FC<BookingConfirmationProps> = ({
   };
 
   const handleConfirmBooking = async () => {
+    if (!user) {
+      setError('Please log in to book an appointment.');
+      return;
+    }
+
     try {
       setIsBooking(true);
       setError('');
 
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Book appointment via API
+      const appointment = await apiService.bookAppointment({
+        doctorId: doctor.id,
+        date: slot.date,
+        time: slot.time,
+        patientId: user.id,
+        type: appointmentType
+      });
       
-      // Add appointment to the system
+      // Add appointment to the booking context
       addAppointment({
         doctor,
         date: slot.date,
@@ -138,8 +154,50 @@ const BookingConfirmation: React.FC<BookingConfirmationProps> = ({
             <div className="flex items-center space-x-3">
               <User className="w-5 h-5 text-blue-600" />
               <span className="text-gray-600">Type:</span>
-              <span className="font-medium text-gray-900">Consultation</span>
+              <select
+                value={appointmentType}
+                onChange={(e) => setAppointmentType(e.target.value)}
+                className="font-medium text-gray-900 border border-gray-300 rounded-lg px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="Consultation">Consultation</option>
+                <option value="Follow-up">Follow-up</option>
+                <option value="Check-up">Check-up</option>
+                <option value="Emergency">Emergency</option>
+              </select>
             </div>
+          </div>
+        </div>
+
+        {/* Additional Information */}
+        <div className="p-6 border-t border-gray-200 space-y-4">
+          <h4 className="text-lg font-semibold text-gray-900">Additional Information</h4>
+          
+          <div>
+            <label htmlFor="symptoms" className="block text-sm font-medium text-gray-700 mb-2">
+              Symptoms or Reason for Visit
+            </label>
+            <textarea
+              id="symptoms"
+              value={symptoms}
+              onChange={(e) => setSymptoms(e.target.value)}
+              rows={3}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Please describe your symptoms or reason for the appointment..."
+            />
+          </div>
+          
+          <div>
+            <label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-2">
+              Additional Notes (Optional)
+            </label>
+            <textarea
+              id="notes"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={2}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Any additional information you'd like the doctor to know..."
+            />
           </div>
         </div>
 

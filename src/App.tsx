@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import Login from './components/Login';
 import Signup from './components/Signup';
@@ -7,32 +7,37 @@ import DoctorSelection from './components/DoctorSelection';
 import TimeSlotPicker from './components/TimeSlotPicker';
 import BookingConfirmation from './components/BookingConfirmation';
 import Profile from './components/Profile';
-import { User, Doctor } from './services/api';
+import DoctorDashboard from './components/doctor/DoctorDashboard';
+import DoctorProfile from './components/doctor/DoctorProfile';
+import DoctorAppointments from './components/doctor/DoctorAppointments';
+import DoctorPatients from './components/doctor/DoctorPatients';
+import DoctorAvailability from './components/doctor/DoctorAvailability';
+import { Doctor } from './services/api';
 import { BookingProvider, useBooking } from './contexts/BookingContext';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { DoctorProvider } from './contexts/DoctorContext';
 
 // Layout component with navigation
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const [user, setUser] = useState<User | null>(() => {
-    const savedUser = localStorage.getItem('user');
-    return savedUser ? JSON.parse(savedUser) : null;
-  });
+  const { user, doctor, userType, logout } = useAuth();
 
   const handleLogout = () => {
-    localStorage.removeItem('user');
-    setUser(null);
+    logout();
     navigate('/login');
   };
 
-  // Don't show navigation for auth pages
-  if (location.pathname === '/login' || location.pathname === '/signup') {
+  // Don't show navigation for auth pages or doctor pages (they have their own navigation)
+  if (location.pathname === '/login' || 
+      location.pathname === '/signup' || 
+      location.pathname.startsWith('/doctor/')) {
     return <>{children}</>;
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
-      {/* Navigation Header */}
+      {/* Navigation Header - Only for patient routes */}
       <nav className="bg-white/80 backdrop-blur-md border-b border-gray-200/50 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
@@ -50,7 +55,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               </div>
             </div>
 
-            {user && (
+            {user && userType === 'patient' && (
               <div className="flex items-center space-x-4">
                 <button
                   onClick={() => navigate('/dashboard')}
@@ -102,8 +107,8 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         </div>
       </nav>
 
-      {/* Breadcrumb */}
-      {location.pathname !== '/dashboard' && (
+      {/* Breadcrumb - Only for patient routes */}
+      {location.pathname !== '/dashboard' && userType === 'patient' && (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <nav className="flex" aria-label="Breadcrumb">
             <ol className="flex items-center space-x-2">
@@ -135,27 +140,56 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       )}
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className={userType === 'patient' ? "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8" : ""}>
         {children}
       </main>
     </div>
   );
 };
 
-// Protected Route component
-const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const user = localStorage.getItem('user');
-  return user ? <>{children}</> : <Navigate to="/login" replace />;
+// Protected Route components
+const PatientProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user, userType, isLoading } = useAuth();
+  
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="flex items-center space-x-2">
+          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+          <span className="text-gray-600 font-medium">Loading...</span>
+        </div>
+      </div>
+    );
+  }
+  
+  return (user && userType === 'patient') ? <>{children}</> : <Navigate to="/login" replace />;
+};
+
+const DoctorProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { doctor, userType, isLoading } = useAuth();
+  
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="flex items-center space-x-2">
+          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+          <span className="text-gray-600 font-medium">Loading...</span>
+        </div>
+      </div>
+    );
+  }
+  
+  return (doctor && userType === 'doctor') ? <>{children}</> : <Navigate to="/login" replace />;
 };
 
 // Route components with proper navigation
 const DashboardRoute: React.FC = () => {
   const navigate = useNavigate();
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const { user } = useAuth();
   
   return (
     <Dashboard 
-      user={user}
+      user={user!}
       onBookAppointment={() => navigate('/doctors')}
       onViewProfile={() => navigate('/profile')}
     />
@@ -228,11 +262,11 @@ const BookingConfirmationRoute: React.FC = () => {
 
 const ProfileRoute: React.FC = () => {
   const navigate = useNavigate();
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const { user } = useAuth();
   
   return (
     <Profile 
-      user={user}
+      user={user!}
       onBack={() => navigate('/dashboard')}
     />
   );
@@ -240,92 +274,95 @@ const ProfileRoute: React.FC = () => {
 
 // Main App component
 function App() {
-  const [user, setUser] = useState<User | null>(() => {
-    const savedUser = localStorage.getItem('user');
-    return savedUser ? JSON.parse(savedUser) : null;
-  });
-
-  const handleLogin = (userData: { name: string; email: string }) => {
-    const newUser: User = {
-      id: 'user123',
-      name: userData.name,
-      email: userData.email,
-      phone: '+1-555-0000'
-    };
-    setUser(newUser);
-    localStorage.setItem('user', JSON.stringify(newUser));
-  };
-
-  const handleSignup = (userData: { name: string; email: string }) => {
-    const newUser: User = {
-      id: 'user123',
-      name: userData.name,
-      email: userData.email,
-      phone: '+1-555-0000'
-    };
-    setUser(newUser);
-    localStorage.setItem('user', JSON.stringify(newUser));
-  };
-
   return (
-    <BookingProvider>
-      <Router>
-        <Layout>
-          <Routes>
-            {/* Public routes */}
-            <Route 
-              path="/login" 
-              element={
-                user ? <Navigate to="/dashboard" replace /> : 
-                <Login onLogin={handleLogin} onSwitchToSignup={() => {}} />
-              } 
-            />
-            <Route 
-              path="/signup" 
-              element={
-                user ? <Navigate to="/dashboard" replace /> : 
-                <Signup onSignup={handleSignup} onSwitchToLogin={() => {}} />
-              } 
-            />
+    <AuthProvider>
+      <DoctorProvider>
+        <BookingProvider>
+          <Router>
+            <Layout>
+              <Routes>
+                {/* Public routes */}
+                <Route 
+                  path="/login" 
+                  element={<Login />} 
+                />
+                <Route 
+                  path="/signup" 
+                  element={<Signup />} 
+                />
 
-            {/* Protected routes */}
-            <Route path="/dashboard" element={
-              <ProtectedRoute>
-                <DashboardRoute />
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/doctors" element={
-              <ProtectedRoute>
-                <DoctorsRoute />
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/appointment-booking" element={
-              <ProtectedRoute>
-                <AppointmentBookingRoute />
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/booking-confirmation" element={
-              <ProtectedRoute>
-                <BookingConfirmationRoute />
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/profile" element={
-              <ProtectedRoute>
-                <ProfileRoute />
-              </ProtectedRoute>
-            } />
+                {/* Patient Protected routes */}
+                <Route path="/dashboard" element={
+                  <PatientProtectedRoute>
+                    <DashboardRoute />
+                  </PatientProtectedRoute>
+                } />
+                
+                <Route path="/doctors" element={
+                  <PatientProtectedRoute>
+                    <DoctorsRoute />
+                  </PatientProtectedRoute>
+                } />
+                
+                <Route path="/appointment-booking" element={
+                  <PatientProtectedRoute>
+                    <AppointmentBookingRoute />
+                  </PatientProtectedRoute>
+                } />
+                
+                <Route path="/booking-confirmation" element={
+                  <PatientProtectedRoute>
+                    <BookingConfirmationRoute />
+                  </PatientProtectedRoute>
+                } />
+                
+                <Route path="/profile" element={
+                  <PatientProtectedRoute>
+                    <ProfileRoute />
+                  </PatientProtectedRoute>
+                } />
 
-            {/* Default redirect */}
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
-          </Routes>
-        </Layout>
-      </Router>
-    </BookingProvider>
+                {/* Doctor Protected routes */}
+                <Route path="/doctor/dashboard" element={
+                  <DoctorProtectedRoute>
+                    <DoctorDashboard />
+                  </DoctorProtectedRoute>
+                } />
+
+                {/* Doctor Profile */}
+                <Route path="/doctor/profile" element={
+                  <DoctorProtectedRoute>
+                    <DoctorProfile />
+                  </DoctorProtectedRoute>
+                } />
+
+                <Route path="/doctor/appointments" element={
+                  <DoctorProtectedRoute>
+                    <DoctorAppointments />
+                  </DoctorProtectedRoute>
+                } />
+
+                <Route path="/doctor/patients" element={
+                  <DoctorProtectedRoute>
+                    <DoctorPatients />
+                  </DoctorProtectedRoute>
+                } />
+
+                <Route path="/doctor/availability" element={
+                  <DoctorProtectedRoute>
+                    <DoctorAvailability />
+                  </DoctorProtectedRoute>
+                } />
+
+                {/* Default redirects */}
+                <Route path="/" element={<Navigate to="/login" replace />} />
+                <Route path="*" element={<Navigate to="/login" replace />} />
+              </Routes>
+            </Layout>
+          </Router>
+        </BookingProvider>
+      </DoctorProvider>
+    </AuthProvider>
   );
 }
 
